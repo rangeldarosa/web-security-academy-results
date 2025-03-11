@@ -14,10 +14,7 @@ class SQL(Base):
         if self.verbose:
             self.log(f"Response status code: {response.status_code}", "info")
 
-        if response.status_code == 200:
-            self.log("Lab Solved", "success")
-        else:
-            self.log(f"Failed to solve lab", "error")
+        self.is_lab_solved()
         
 
 

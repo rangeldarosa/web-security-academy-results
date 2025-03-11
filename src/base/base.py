@@ -4,7 +4,7 @@ import argparse
 import logging
 import sys
 import urllib3
-
+from bs4 import BeautifulSoup
 # Disable the InsecureRequestWarning
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -103,6 +103,22 @@ class Base(ABC):
     def run(self):
         """Run the exploit (to be implemented by subclasses)"""
         raise NotImplementedError("Subclasses must implement run()")
+    
+    def is_lab_solved(self):
+        if self._check_if_lab_solved():
+            self.log("Lab Solved", "success")
+        else:
+            self.log("Lab Not Solved", "error")
+
+
+    def _check_if_lab_solved(self):
+        response = self.session.get(self.base_url)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        lab_status = soup.find('div', class_='widgetcontainer-lab-status')
+        if lab_status:
+            if lab_status.get('class') == ['is-notsolved']:
+                return False
+        return True
         
     def log(self, message, type="info"):
         if type == "info":
@@ -113,3 +129,6 @@ class Base(ABC):
             logging.warning(f"{self.WARNING_PREFIX} {message}")
         elif type == "success":
             logging.info(f"{self.SUCCESS_PREFIX} {message}")
+        elif type == "verbose":
+            if self.verbose:
+                logging.info(f"{self.INFO_PREFIX} {message}")

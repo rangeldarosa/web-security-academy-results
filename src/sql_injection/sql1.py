@@ -10,11 +10,8 @@ class SQL(Base):
     def run(self):
         self.params = {'category': "Gifts' OR 1=1 --"}
         response = self.session.get(f"{self.base_url}/filter", params=self.params)
-        if response.status_code == 200:
-            self.log("Lab Solved", "success")
-        else:
-            self.log(f"Failed to connect to {self.base_url}", "error")
         
+        self.is_lab_solved()
 
 
 if __name__ == "__main__":

