@@ -116,7 +116,7 @@ class Base(ABC):
         soup = BeautifulSoup(response.text, 'html.parser')
         lab_status = soup.find('div', class_='widgetcontainer-lab-status')
         if lab_status:
-            if lab_status.get('class') == ['is-notsolved']:
+            if 'is-notsolved' in lab_status.get('class'):
                 return False
         return True
         
